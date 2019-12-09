@@ -1,8 +1,10 @@
-# Sphinx-rstprog
+Sphinx-rstprog
+======================================================================
 
 Document simple programs with rst syntax and generate sphinx documentation.
 
-## Usage
+Usage
+----------------------------------------------------------------------
 
 Add and configure in ``conf.py``::
 
@@ -14,7 +16,8 @@ Add and configure in ``conf.py``::
     ('.c', '/**', '**/' ),
     ]
 
-## Installation
+Installation
+----------------------------------------------------------------------
 
 In this repository
 
@@ -22,7 +25,8 @@ In this repository
   
   pip3 install .
 
-## Tips
+Tips
+----------------------------------------------------------------------
 
 If you do not want all files to be processed by sphinx, use
 ``exclude_patterns`` to restrict the paths. Example, to
