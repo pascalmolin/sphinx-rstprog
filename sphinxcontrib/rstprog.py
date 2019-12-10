@@ -7,6 +7,7 @@ logger.info('loading extension %s'%__name__)
 import re
 
 __version__ = '0.0.1'
+DEBUG = False
 
 class progtorst:
 
@@ -24,12 +25,12 @@ class progtorst:
     def run(self, lines):
         self.buffer = []
         self.out = []
-        self.iw = 0
         self.parse = self.parse_prog
         if isinstance(lines, str):
             lines = lines.split('\n')
         for l in lines:
-            logger.info('[%s] %s'%(self.parse.__name__,l))
+            if DEBUG:
+                logger.info('[%s] %s'%(self.parse.__name__,l))
             self.parse(l)
 
         return self.out
@@ -37,7 +38,7 @@ class progtorst:
     def write(self,l,flush=False):
         # buffer by default, remove empty lines
         if self.buffer or l:
-            self.buffer.append(self.iw*self.indent + l)
+            self.buffer.append(l)
         if flush:
             if self.buffer:
                 self.out += self.buffer
@@ -45,23 +46,21 @@ class progtorst:
             
     def start_text(self):
         self.parse = self.parse_text
-        self.iw = 0
         self.write('')
 
     def end_text(self):
-        self.iw = 0
         self.write('',flush=True)
 
     def start_prog(self):
         self.parse = self.parse_prog
         self.write('',flush=True)
-        self.iw = 1
 
     def end_prog(self):
         # manual flush
         if any( [ l.strip() != '' for l in self.buffer ]):
             self.out += ['', self.codedirective, self.indent ]
             self.out += [ self.indent + l for l in self.buffer ]
+            self.out += ['']
             self.buffer = []
 
     def parse_text(self,l):
@@ -94,14 +93,22 @@ class GPparser(RSTParser):
         # inputstring is str of list(str)
 
         lines = self.codeparser.run(inputstring)
+        logger.info('\n###'.join(lines))
 
         super().parse(lines, document)
+
+def config_inited(app, config):
+    global DEBUG
+    DEBUG = config.rstprog_debug
 
 def setup(app):
 
     # type: (Sphinx) -> Dict[str, Any]
     app.add_source_parser(GPparser)
     app.add_source_suffix('.gp','gpdocument')
+
+    app.add_config_value('rstprog_debug', DEBUG, '')
+    app.connect('config-inited', config_inited)
 
     return {
         'version': __version__,
