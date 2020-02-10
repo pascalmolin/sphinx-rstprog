@@ -9,6 +9,12 @@ import re
 __version__ = '0.0.1'
 DEBUG = False
 
+class IllegalDelimiter(ExtensionError):
+    category = 'RstProg error'
+    def __init__(self, message, line, number, document):
+        message += " '%s' -- %s line %d"%(line, document, number+1)
+        super().__init__(message)
+
 class progtorst:
 
     commentstart = '/**'
@@ -22,16 +28,21 @@ class progtorst:
     def __init__(self):
         pass
 
-    def run(self, lines):
+    def run(self, lines, document):
         self.buffer = []
         self.out = []
+        self.document = document
         self.parse = self.parse_prog
         if isinstance(lines, str):
             lines = lines.split('\n')
-        for l in lines:
-            if DEBUG:
-                logger.info('[%s] %s'%(self.parse.__name__,l))
-            self.parse(l)
+        try:
+            for i,l in enumerate(lines):
+                if DEBUG:
+                    logger.info('[%s:%d] %s'%(self.parse.__name__,i,l))
+                self.parse(l,i)
+        except IllegalDelimiter as e:
+            logger.error(e)
+            return self.out
 
         return self.out
 
@@ -63,21 +74,21 @@ class progtorst:
             self.out += ['']
             self.buffer = []
 
-    def parse_text(self,l):
+    def parse_text(self,l,i):
         if self.start.match(l):
-            raise SyntaxError('illegal start comment %s' % l)
+            raise IllegalDelimiter('unexpected start comment',l,i,self.document)
         elif self.end.match(l):
             self.end_text()
             self.start_prog()
         else:
             self.write(l)
 
-    def parse_prog(self,l):
+    def parse_prog(self,l,i):
         if self.start.match(l):
             self.end_prog()
             self.start_text()
         elif self.end.match(l):
-            raise SyntaxError('illegal end comment %s' % l)
+            raise IllegalDelimiter('unexpected end comment',l,i,self.document)
         else:
             self.write(l)
 
@@ -92,10 +103,12 @@ class GPparser(RSTParser):
     def parse(self, inputstring, document):
         # inputstring is str of list(str)
 
-        lines = self.codeparser.run(inputstring)
-        logger.info('\n###'.join(lines))
+        lines = self.codeparser.run(inputstring, document)
+        if DEBUG:
+            logger.info('\n###'.join(lines))
 
         super().parse(lines, document)
+
 
 def config_inited(app, config):
     global DEBUG
