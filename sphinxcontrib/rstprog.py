@@ -42,9 +42,20 @@ class progtorst:
                 self.parse(l,i)
         except IllegalDelimiter as e:
             logger.error(e)
+            self.flush_pending()
             return self.out
 
+        # a file almost always ends in "prog" mode (code after the last
+        # /** **/ block, e.g. a trailing check() with no closing comment):
+        # without a final flush here that whole tail is silently dropped.
+        self.flush_pending()
         return self.out
+
+    def flush_pending(self):
+        if self.parse == self.parse_text:
+            self.end_text()
+        else:
+            self.end_prog()
 
     def write(self,l,flush=False):
         # buffer by default, remove empty lines
